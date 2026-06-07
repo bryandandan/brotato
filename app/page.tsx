@@ -54,7 +54,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 px-4 py-8 font-mono">
-      <div className="max-w-[1000px] mx-auto">
+      <div className="max-w-[1400px] mx-auto">
       <div className="flex gap-3 mb-4 flex-wrap">
         <input
           type="search"
