@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { weapons } from "@/app/data/weapons"
+import { computeAvgEnemyHp, DANGER_LABELS } from "@/app/data/enemies"
 
 function calcDps(damage: number, cooldown: number, critical: string, critMultiplier: number, pierceMultiplier: number, effectiveCooldown?: number) {
   const critChance = parseFloat(critical) / 100
@@ -16,8 +17,19 @@ function dpsClass(dps: number) {
   return "text-zinc-400"
 }
 
+function kpsClass(kps: number) {
+  if (kps >= 5)   return "text-red-400 font-bold"
+  if (kps >= 2)   return "text-orange-400 font-bold"
+  if (kps >= 0.5) return "text-yellow-400"
+  return "text-zinc-400"
+}
+
 export default function Home() {
   const [query, setQuery] = useState("")
+  const [wave, setWave] = useState(1)
+  const [danger, setDanger] = useState(0)
+
+  const avgHp = computeAvgEnemyHp(wave, danger)
 
   const sorted = [...weapons].sort(
     (a, b) =>
@@ -34,13 +46,33 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 px-4 py-8 font-mono">
       <div className="max-w-[1000px] mx-auto">
-      <input
-        type="search"
-        placeholder="Search weapons..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="w-full mb-4 px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 text-base"
-      />
+      <div className="flex gap-3 mb-4 flex-wrap">
+        <input
+          type="search"
+          placeholder="Search weapons..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="flex-1 min-w-48 px-4 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 text-base"
+        />
+        <select
+          value={wave}
+          onChange={(e) => setWave(Number(e.target.value))}
+          className="px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-zinc-500 text-sm"
+        >
+          {Array.from({ length: 20 }, (_, i) => i + 1).map((w) => (
+            <option key={w} value={w}>Wave {w}</option>
+          ))}
+        </select>
+        <select
+          value={danger}
+          onChange={(e) => setDanger(Number(e.target.value))}
+          className="px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 focus:outline-none focus:border-zinc-500 text-sm"
+        >
+          {[0, 1, 2, 3, 4, 5].map((d) => (
+            <option key={d} value={d}>{DANGER_LABELS[d]}</option>
+          ))}
+        </select>
+      </div>
 
       <div className="overflow-auto rounded-xl border border-zinc-700 max-h-[calc(100vh-11rem)]">
         <table className="w-full text-base text-left">
@@ -56,11 +88,13 @@ export default function Home() {
               <th className="px-4 py-3 font-semibold text-right">Pierce</th>
               <th className="px-4 py-3 font-semibold">Special</th>
               <th className="px-4 py-3 font-semibold text-right text-orange-400">DPS ⚡</th>
+              <th className="px-4 py-3 font-semibold text-right text-purple-400">KPS 💀</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((weapon) => {
               const dps = calcDps(weapon.damage, weapon.cooldown, weapon.critical, weapon.critMultiplier, weapon.pierceMultiplier, weapon.effectiveCooldown)
+              const kps = dps / avgHp
               return (
                 <tr
                   key={weapon.name}
@@ -80,12 +114,15 @@ export default function Home() {
                   <td className={`px-4 py-2.5 text-right tabular-nums ${dpsClass(dps)}`}>
                     {dps.toFixed(1)}
                   </td>
+                  <td className={`px-4 py-2.5 text-right tabular-nums ${kpsClass(kps)}`}>
+                    {kps.toFixed(2)}
+                  </td>
                 </tr>
               )
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-8 text-center text-zinc-600">
+                <td colSpan={11} className="px-4 py-8 text-center text-zinc-600">
                   No weapons match &quot;{query}&quot;
                 </td>
               </tr>
@@ -104,7 +141,7 @@ export default function Home() {
         >
           brotato.wiki.spellsandguns.com
         </a>
-        . Base Tier 1 values only. DPS includes crit and pierce multipliers; excludes stat scaling and DoT bonuses.
+        . Base Tier 1 values only. DPS includes crit and pierce multipliers; excludes stat scaling and DoT bonuses. KPS = DPS ÷ avg enemy HP for the selected wave/danger.
       </p>
       </div>
     </main>
