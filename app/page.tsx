@@ -4,10 +4,19 @@ import { useState } from "react"
 import { weapons } from "@/app/data/weapons"
 import { computeAvgEnemyHp, DANGER_LABELS } from "@/app/data/enemies"
 
-function calcDps(damage: number, cooldown: number, critical: string, critMultiplier: number, pierceMultiplier: number, effectiveCooldown?: number) {
+function avgDmgPerShot(damage: number, critical: string, critMultiplier: number) {
   const critChance = parseFloat(critical) / 100
-  const avgDamage = damage * (1 + critChance * (critMultiplier - 1)) * pierceMultiplier
-  return avgDamage / (effectiveCooldown ?? cooldown)
+  return damage * (1 + critChance * (critMultiplier - 1))
+}
+
+function calcDps(damage: number, cooldown: number, critical: string, critMultiplier: number, pierceMultiplier: number, effectiveCooldown?: number) {
+  return avgDmgPerShot(damage, critical, critMultiplier) * pierceMultiplier / (effectiveCooldown ?? cooldown)
+}
+
+function calcKps(damage: number, critical: string, critMultiplier: number, cooldown: number, avgHp: number, effectiveCooldown?: number) {
+  const cd = effectiveCooldown ?? cooldown
+  const shotsToKill = Math.ceil(avgHp / avgDmgPerShot(damage, critical, critMultiplier))
+  return 1 / (shotsToKill * cd)
 }
 
 function dpsClass(dps: number) {
@@ -94,7 +103,7 @@ export default function Home() {
           <tbody>
             {filtered.map((weapon) => {
               const dps = calcDps(weapon.damage, weapon.cooldown, weapon.critical, weapon.critMultiplier, weapon.pierceMultiplier, weapon.effectiveCooldown)
-              const kps = dps / avgHp
+              const kps = calcKps(weapon.damage, weapon.critical, weapon.critMultiplier, weapon.cooldown, avgHp, weapon.effectiveCooldown)
               return (
                 <tr
                   key={weapon.name}
@@ -141,7 +150,7 @@ export default function Home() {
         >
           brotato.wiki.spellsandguns.com
         </a>
-        . Base Tier 1 values only. DPS includes crit and pierce multipliers; excludes stat scaling and DoT bonuses. KPS = DPS ÷ avg enemy HP for the selected wave/danger.
+        . Base Tier 1 values only. DPS includes crit and pierce multipliers; excludes stat scaling and DoT bonuses. KPS = 1 ÷ (shots-to-kill × cooldown), accounting for overkill.
       </p>
       </div>
     </main>
